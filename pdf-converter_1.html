@@ -1,0 +1,1446 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF → TXT / CSV / XLSX</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root{
+  --bg:#0e0e10;
+  --surface:#18181c;
+  --surface2:#222228;
+  --border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.15);
+
+  /* TXT = bianco */
+  --accent:#ffffff;
+
+  /* CSV = arancio */
+  --accent-csv:#f59e0b;
+
+  /* XLSX = verde */
+  --accent-xlsx:#22c55e;
+
+  --text:#f0f0e8;
+  --muted:#888880;
+  --danger:#f07060;
+
+  --radius:10px;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+
+  min-height:100vh;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+
+  padding:48px 24px 80px;
+}
+
+header{
+  text-align:center;
+  margin-bottom:48px;
+}
+
+.logo{
+  font-size:11px;
+  font-family:'DM Mono', monospace;
+  letter-spacing:0.18em;
+  color:var(--accent);
+  text-transform:uppercase;
+  margin-bottom:12px;
+}
+
+h1{
+  font-size:clamp(2rem,5vw,3.5rem);
+  font-weight:800;
+  line-height:1.05;
+  letter-spacing:-0.03em;
+}
+h1 .fmt-pdf{ color:red; }
+h1 .arrow{ color:var(--accent); }
+h1 .fmt-txt{ color:var(--accent); }
+h1 .fmt-csv{ color:var(--accent-csv); }
+h1 .fmt-xlsx{ color:var(--accent-xlsx); }
+
+.subtitle{
+  margin-top:12px;
+  font-size:15px;
+  color:var(--muted);
+  font-weight:400;
+  font-family:'DM Mono', monospace;
+}
+
+.card{
+  background:var(--surface);
+  border:0.5px solid var(--border);
+  border-radius:16px;
+  padding:32px;
+  width:100%;
+  max-width:660px;
+}
+
+/* FORMAT SELECTOR */
+
+.format-row{
+  display:flex;
+  gap:8px;
+  margin-bottom:24px;
+}
+
+.fmt-btn{
+  flex:1;
+  padding:10px 8px;
+
+  border-radius:var(--radius);
+  border:1.5px solid var(--border2);
+
+  background:var(--surface2);
+  color:var(--muted);
+
+  font-family:'DM Mono', monospace;
+  font-size:12px;
+  font-weight:500;
+
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+
+  cursor:pointer;
+
+  transition:all .2s ease;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+
+.fmt-btn .fmt-icon{
+  font-size:20px;
+}
+
+/* ACTIVE STATES */
+.fmt-btn.active-txt{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:rgba(255,255,255,.06);
+}
+
+.fmt-btn.active-csv{
+  border-color:var(--accent-csv);
+  color:var(--accent-csv);
+  background:rgba(245,158,11,.08);
+}
+
+.fmt-btn.active-xlsx{
+  border-color:var(--accent-xlsx);
+  color:var(--accent-xlsx);
+  background:rgba(34,197,94,.08);
+}
+
+/* CSV OPTIONS */
+
+.csv-options{
+  margin-bottom:20px;
+  padding:14px 16px;
+
+  background:rgba(245,158,11,.06);
+  border:0.5px solid rgba(245,158,11,.25);
+
+  border-radius:var(--radius);
+
+  display:none;
+}
+
+.csv-options.show{
+  display:block;
+}
+
+.csv-options label{
+  font-size:12px;
+  font-family:'DM Mono', monospace;
+  color:var(--muted);
+
+  display:block;
+  margin-bottom:8px;
+}
+
+.sep-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.sep-btn{
+  padding:5px 14px;
+
+  border-radius:6px;
+  border:1px solid var(--border2);
+
+  background:var(--surface2);
+  color:var(--muted);
+
+  font-family:'DM Mono', monospace;
+  font-size:12px;
+
+  cursor:pointer;
+
+  transition:all .15s ease;
+}
+
+.sep-btn.active{
+  border-color:var(--accent-csv);
+  color:var(--accent-csv);
+}
+
+/* DROP ZONE */
+
+.drop-zone{
+  border:1.5px dashed var(--border2);
+  border-radius:var(--radius);
+
+  padding:48px 24px;
+
+  text-align:center;
+  cursor:pointer;
+
+  transition:all .2s ease;
+
+  position:relative;
+  overflow:hidden;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover{
+  border-color:var(--accent);
+  background:rgba(255,255,255,.04);
+}
+
+.drop-zone input[type="file"]{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  cursor:pointer;
+  width:100%;
+  height:100%;
+}
+
+.drop-icon{
+  font-size:40px;
+  margin-bottom:12px;
+  display:block;
+}
+
+.drop-label{
+  font-size:16px;
+  font-weight:600;
+  color:var(--text);
+}
+
+.drop-sub{
+  font-size:13px;
+  color:var(--muted);
+  font-family:'DM Mono', monospace;
+  margin-top:6px;
+}
+
+/* FILE LIST */
+
+.file-list{
+  margin-top:20px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.file-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  background:var(--surface2);
+  border:0.5px solid var(--border);
+
+  border-radius:var(--radius);
+
+  padding:10px 14px;
+
+  font-size:13px;
+  font-family:'DM Mono', monospace;
+}
+
+.file-item .fname{
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.file-item .fsize{
+  color:var(--muted);
+  font-size:11px;
+}
+
+.file-item .fstatus{
+  font-size:11px;
+  font-weight:500;
+
+  padding:2px 8px;
+  border-radius:20px;
+
+  text-transform:uppercase;
+}
+
+/* STATUS COLORS */
+.fstatus.pending{
+  background:rgba(255,255,255,.06);
+  color:var(--muted);
+}
+
+.fstatus.working{
+  background:rgba(255,255,255,.08);
+  color:var(--accent);
+}
+
+.fstatus.done{
+  background:rgba(34,197,94,.15);
+  color:var(--accent-xlsx);
+}
+
+.fstatus.error{
+  background:rgba(240,112,96,.15);
+  color:var(--danger);
+}
+
+/* PROGRESS */
+
+.progress-wrap{
+  margin-top:24px;
+  display:none;
+}
+
+.progress-label{
+  font-size:12px;
+  font-family:'DM Mono', monospace;
+  color:var(--muted);
+
+  margin-bottom:8px;
+
+  display:flex;
+  justify-content:space-between;
+}
+
+.progress-bar-bg{
+  height:4px;
+  background:var(--surface2);
+  border-radius:2px;
+  overflow:hidden;
+}
+
+.progress-bar-fill{
+  height:100%;
+  background:var(--accent);
+  width:0%;
+  transition:width .3s ease;
+}
+
+/* ACTIONS */
+
+.actions{
+  margin-top:24px;
+  display:flex;
+  gap:10px;
+}
+
+.btn{
+  flex:1;
+  padding:14px 20px;
+
+  font-family:'Syne', sans-serif;
+  font-size:14px;
+  font-weight:600;
+
+  border-radius:var(--radius);
+  border:none;
+
+  cursor:pointer;
+
+  transition:all .15s ease;
+
+  text-transform:uppercase;
+}
+
+.btn:active{
+  transform:scale(.98);
+}
+
+/* BUTTON COLORS */
+.btn-primary{
+  background:var(--accent);
+  color:#0e0e10;
+}
+
+.btn-primary-csv{
+  background:var(--accent-csv);
+  color:#0e0e10;
+}
+
+.btn-primary-xlsx{
+  background:var(--accent-xlsx);
+  color:#0e0e10;
+}
+
+/* RESULTS */
+
+.results{
+  margin-top:16px;
+  display:none;
+  flex-direction:column;
+  gap:8px;
+}
+
+.result-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  border-radius:var(--radius);
+  padding:10px 14px;
+
+  font-size:13px;
+  font-family:'DM Mono', monospace;
+}
+
+/* TXT */
+.result-item.res-txt{
+  background:rgba(255,255,255,.06);
+  border:0.5px solid rgba(255,255,255,.15);
+}
+
+/* CSV */
+.result-item.res-csv{
+  background:rgba(245,158,11,.08);
+  border:0.5px solid rgba(245,158,11,.25);
+}
+
+/* XLSX */
+.result-item.res-xlsx{
+  background:rgba(34,197,94,.08);
+  border:0.5px solid rgba(34,197,94,.25);
+}
+
+.result-item .rname{
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.result-item .rmeta{
+  color:var(--muted);
+  font-size:11px;
+}
+
+/* DOWNLOAD BUTTONS */
+
+.btn-dl{
+  font-family:'DM Mono', monospace;
+  font-size:11px;
+  font-weight:500;
+
+  padding:5px 12px;
+
+  border-radius:6px;
+  border:none;
+
+  cursor:pointer;
+  text-transform:uppercase;
+}
+
+/* TXT */
+.btn-dl-txt{
+  background:var(--accent);
+  color:#0e0e10;
+}
+
+/* CSV */
+.btn-dl-csv{
+  background:var(--accent-csv);
+  color:#0e0e10;
+}
+
+/* XLSX */
+.btn-dl-xlsx{
+  background:var(--accent-xlsx);
+  color:#0e0e10;
+}
+
+.footer-note{
+  margin-top:32px;
+  font-size:11px;
+  font-family:'DM Mono', monospace;
+  color:var(--muted);
+  text-align:center;
+  line-height:1.7;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <p class="logo">L.S v3.0 — Web Edition</p>
+
+  <h1>
+    <span class="fmt-pdf">PDF → </span>
+    <span class="fmt-txt">TXT</span>
+    <span class="arrow">/</span>
+    <span class="fmt-csv">CSV</span>
+    <span class="arrow">/</span>
+    <span class="fmt-xlsx">XLSX</span>
+  </h1>
+
+  <p class="subtitle">
+    Conversione locale · layout preservato · nessun upload
+  </p>
+</header>
+
+<div class="card">
+
+  <div class="format-row">
+    <button class="fmt-btn active-txt" data-fmt="txt">
+      <span class="fmt-icon">📄</span>
+      TXT
+    </button>
+
+    <button class="fmt-btn" data-fmt="csv">
+      <span class="fmt-icon">📊</span>
+      CSV
+    </button>
+
+    <button class="fmt-btn" data-fmt="xlsx">
+      <span class="fmt-icon">🗂️</span>
+      XLSX
+    </button>
+  </div>
+
+  <div class="csv-options" id="csvOptions">
+    <label>Separatore colonne</label>
+
+    <div class="sep-row">
+      <button class="sep-btn active" data-sep=",">virgola ,</button>
+      <button class="sep-btn" data-sep=";">punto e virgola ;</button>
+      <button class="sep-btn" data-sep="	">tab ⇥</button>
+      <button class="sep-btn" data-sep="|">pipe |</button>
+    </div>
+  </div>
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".pdf" multiple>
+
+    <span class="drop-icon">📄</span>
+
+    <p class="drop-label">
+      Trascina i PDF qui
+    </p>
+
+    <p class="drop-sub">
+      oppure clicca per selezionare · più file supportati
+    </p>
+  </div>
+
+  <div class="file-list" id="fileList"></div>
+
+  <div class="progress-wrap" id="progressWrap">
+
+    <div class="progress-label">
+      <span id="progressText">Conversione in corso…</span>
+      <span id="progressCount">0/0</span>
+    </div>
+
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-ghost" id="btnClear" disabled>
+      Svuota
+    </button>
+
+    <button class="btn btn-primary" id="btnConvert" disabled>
+      Converti
+    </button>
+  </div>
+
+  <div class="results" id="results"></div>
+
+</div>
+
+<p class="footer-note">
+  Tutto elaborato nel browser · i tuoi file non lasciano mai il tuo dispositivo<br>
+</p>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ─────────────────────────────
+   STATE
+───────────────────────────── */
+
+let selectedFiles = [];
+let convertedFiles = [];
+
+let currentFmt = 'txt';
+let csvSep = ',';
+
+/* ─────────────────────────────
+   ELEMENTS
+───────────────────────────── */
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+const fileList = document.getElementById('fileList');
+
+const btnConvert = document.getElementById('btnConvert');
+const btnClear = document.getElementById('btnClear');
+
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const progressCount = document.getElementById('progressCount');
+
+const resultsDiv = document.getElementById('results');
+
+const csvOptions = document.getElementById('csvOptions');
+
+/* ─────────────────────────────
+   FORMAT BUTTONS
+───────────────────────────── */
+
+document.querySelectorAll('.fmt-btn').forEach(btn => {
+
+  btn.addEventListener('click', () => {
+
+    currentFmt = btn.dataset.fmt;
+
+    document.querySelectorAll('.fmt-btn')
+      .forEach(b => b.className = 'fmt-btn');
+
+    btn.classList.add(`active-${currentFmt}`);
+
+    csvOptions.classList.toggle(
+      'show',
+      currentFmt === 'csv'
+    );
+
+    updateConvertBtnColor();
+  });
+});
+
+/* ─────────────────────────────
+   CSV SEP
+───────────────────────────── */
+
+document.querySelectorAll('.sep-btn').forEach(btn => {
+
+  btn.addEventListener('click', () => {
+
+    csvSep = btn.dataset.sep;
+
+    document.querySelectorAll('.sep-btn')
+      .forEach(b => b.classList.remove('active'));
+
+    btn.classList.add('active');
+  });
+});
+
+/* ─────────────────────────────
+   DRAG DROP
+───────────────────────────── */
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', e => {
+
+  e.preventDefault();
+
+  dropZone.classList.remove('dragover');
+
+  addFiles(
+    [...e.dataTransfer.files]
+      .filter(f => f.type === 'application/pdf')
+  );
+});
+
+fileInput.addEventListener('change', () => {
+
+  addFiles([...fileInput.files]);
+
+  fileInput.value = '';
+});
+
+/* ─────────────────────────────
+   FILES
+───────────────────────────── */
+
+function addFiles(files){
+
+  files.forEach(f => {
+
+    if(!selectedFiles.find(
+      x => x.name === f.name
+      && x.size === f.size
+    )){
+      selectedFiles.push(f);
+    }
+  });
+
+  renderFileList();
+}
+
+function renderFileList(){
+
+  fileList.innerHTML = '';
+
+  selectedFiles.forEach((f,i) => {
+
+    const div = document.createElement('div');
+
+    div.className = 'file-item';
+    div.id = `fi-${i}`;
+
+    div.innerHTML = `
+      <span class="fname">
+        📄 ${f.name}
+      </span>
+
+      <span class="fsize">
+        ${(f.size/1024).toFixed(0)} KB
+      </span>
+
+      <span class="fstatus pending" id="fs-${i}">
+        In attesa
+      </span>
+    `;
+
+    fileList.appendChild(div);
+  });
+
+  const empty = selectedFiles.length === 0;
+
+  btnConvert.disabled = empty;
+  btnClear.disabled = empty;
+
+  updateConvertBtnColor();
+}
+
+function updateConvertBtnColor(){
+
+  const colors = {
+    txt:'btn-primary',
+    csv:'btn-primary-csv',
+    xlsx:'btn-primary-xlsx'
+  };
+
+  btnConvert.className =
+    `btn ${colors[currentFmt]}`;
+}
+
+/* ─────────────────────────────
+   CLEAR
+───────────────────────────── */
+
+btnClear.addEventListener('click', () => {
+
+  selectedFiles = [];
+  convertedFiles = [];
+
+  fileList.innerHTML = '';
+
+  resultsDiv.innerHTML = '';
+  resultsDiv.style.display = 'none';
+
+  progressWrap.style.display = 'none';
+
+  btnConvert.disabled = true;
+  btnClear.disabled = true;
+});
+
+/* ─────────────────────────────
+   CONVERT
+───────────────────────────── */
+
+btnConvert.addEventListener('click', async () => {
+
+  if(!selectedFiles.length) return;
+
+  convertedFiles = [];
+
+  resultsDiv.innerHTML = '';
+  resultsDiv.style.display = 'none';
+
+  progressWrap.style.display = 'block';
+
+  btnConvert.disabled = true;
+  btnClear.disabled = true;
+
+  for(let i=0;i<selectedFiles.length;i++){
+
+    const f = selectedFiles[i];
+
+    const statusEl =
+      document.getElementById(`fs-${i}`);
+
+    statusEl.textContent = 'Conversione';
+    statusEl.className = 'fstatus working';
+
+    progressCount.textContent =
+      `${i+1}/${selectedFiles.length}`;
+
+    progressText.textContent =
+      `Elaborazione: ${f.name}`;
+
+    progressFill.style.width =
+      `${Math.round(
+        (i / selectedFiles.length) * 100
+      )}%`;
+
+    try{
+
+      /* TXT PERFETTO */
+      const txt = await pdfToText(f);
+
+      if(currentFmt === 'txt'){
+
+        convertedFiles.push({
+          fmt:'txt',
+          name:f.name.replace(/\.pdf$/i,'.txt'),
+          content:txt,
+          rows:null
+        });
+
+      } else {
+
+        /* XLSX / CSV PROFESSIONALE */
+        const rows = await pdfToRows(f);
+
+        if(currentFmt === 'csv'){
+
+          const csv = rowsToCsv(rows, csvSep);
+
+          convertedFiles.push({
+            fmt:'csv',
+            name:f.name.replace(/\.pdf$/i,'.csv'),
+            content:csv,
+            rows
+          });
+
+        } else {
+
+          convertedFiles.push({
+            fmt:'xlsx',
+            name:f.name.replace(/\.pdf$/i,'.xlsx'),
+            content:null,
+            rows
+          });
+        }
+      }
+
+      statusEl.textContent = 'Fatto ✓';
+      statusEl.className = 'fstatus done';
+
+    } catch(err){
+
+      console.error(err);
+
+      statusEl.textContent = 'Errore';
+      statusEl.className = 'fstatus error';
+    }
+  }
+
+  progressFill.style.width = '100%';
+
+  progressText.textContent =
+    'Conversione completata!';
+
+  progressCount.textContent =
+    `${selectedFiles.length}/${selectedFiles.length}`;
+
+  btnClear.disabled = false;
+
+  renderResults();
+});
+
+/* ─────────────────────────────
+   PDF → TXT
+   (IDENTICO AL TUO)
+───────────────────────────── */
+
+async function pdfToText(file){
+
+  const buffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({
+    data: buffer
+  }).promise;
+
+  let fullText = '';
+
+  for(let p=1;p<=pdf.numPages;p++){
+
+    const page = await pdf.getPage(p);
+
+    const content =
+      await page.getTextContent({
+        includeMarkedContent:false
+      });
+
+    const viewport =
+      page.getViewport({ scale:1.0 });
+
+    const pageText =
+      extractLayoutText(content, viewport);
+
+    if(p > 1) fullText += '\f';
+
+    fullText += pageText;
+  }
+
+  return fullText;
+}
+
+function extractLayoutText(content, viewport){
+
+  const raw = content.items.filter(
+    it => typeof it.str === 'string'
+    && it.str.length > 0
+  );
+
+  if(!raw.length) return '';
+
+  const pageHeight =
+    viewport.viewBox
+    ? viewport.viewBox[3]
+    : viewport.height;
+
+  const spans = raw.map(item => {
+
+    const m = item.transform;
+
+    const fontSize =
+      Math.abs(m[0]) || Math.abs(m[3]) || 10;
+
+    const w =
+      item.width > 0
+      ? item.width
+      : fontSize * item.str.length * 0.6;
+
+    return {
+      text:item.str,
+      x:m[4],
+      y:pageHeight - m[5],
+      w,
+      h:fontSize
+    };
+  });
+
+  spans.sort((a,b)=>
+    a.y - b.y || a.x - b.x
+  );
+
+  const cwBuckets = {};
+
+  spans.forEach(s => {
+
+    const printable =
+      s.text.replace(/\s+/g,'');
+
+    if(printable.length < 1 || s.w <= 0) return;
+
+    const perChar = s.w / s.text.length;
+
+    if(perChar < 1 || perChar > 30) return;
+
+    const key =
+      Math.round(perChar * 4) / 4;
+
+    cwBuckets[key] =
+      (cwBuckets[key] || 0)
+      + printable.length;
+  });
+
+  let colStep = 6;
+
+  if(Object.keys(cwBuckets).length > 0){
+
+    colStep = parseFloat(
+      Object.entries(cwBuckets)
+      .sort((a,b) => b[1]-a[1])[0][0]
+    );
+  }
+
+  if(colStep < 1) colStep = 6;
+
+  const heights = spans
+    .map(s => s.h)
+    .filter(h => h > 1)
+    .sort((a,b)=>a-b);
+
+  const medH =
+    heights[Math.floor(heights.length/2)]
+    || colStep * 2;
+
+  const lineThresh = medH * 0.5;
+
+  const lineGroups = [];
+
+  spans.forEach(span => {
+
+    let best = null;
+    let bestDist = Infinity;
+
+    for(const g of lineGroups){
+
+      const d = Math.abs(g.y - span.y);
+
+      if(d < lineThresh && d < bestDist){
+        bestDist = d;
+        best = g;
+      }
+    }
+
+    if(best){
+      best.spans.push(span);
+    } else {
+      lineGroups.push({
+        y:span.y,
+        spans:[span]
+      });
+    }
+  });
+
+  lineGroups.sort((a,b)=>a.y-b.y);
+
+  const minX = Math.min(
+    ...spans.map(s => s.x)
+  );
+
+  const lines = lineGroups.map(group => {
+
+    group.spans.sort((a,b)=>a.x-b.x);
+
+    const cols = {};
+
+    let maxCol = 0;
+
+    group.spans.forEach(span => {
+
+      const startCol =
+        Math.max(
+          0,
+          Math.round(
+            (span.x - minX) / colStep
+          )
+        );
+
+      for(let ci=0; ci<span.text.length; ci++){
+
+        const col = startCol + ci;
+
+        if(!(col in cols)){
+          cols[col] = span.text[ci];
+        }
+
+        if(col > maxCol){
+          maxCol = col;
+        }
+      }
+    });
+
+    let line = '';
+
+    for(let c=0;c<=maxCol;c++){
+      line += cols[c] ?? ' ';
+    }
+
+    return line.trimEnd();
+  });
+
+  return lines.join('\n');
+}
+
+/* ─────────────────────────────
+   PDF → ROWS
+   VERSIONE ROBUSTA
+───────────────────────────── */
+
+async function pdfToRows(file){
+
+  const buffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({
+    data: buffer
+  }).promise;
+
+  const allRows = [];
+
+  for(let p=1; p<=pdf.numPages; p++){
+
+    const page = await pdf.getPage(p);
+
+    const content =
+      await page.getTextContent({
+        includeMarkedContent:false
+      });
+
+    const viewport =
+      page.getViewport({ scale:1.0 });
+
+    const pageHeight =
+      viewport.viewBox
+      ? viewport.viewBox[3]
+      : viewport.height;
+
+    const items = content.items
+      .filter(it =>
+        typeof it.str === 'string'
+        && it.str.trim()
+      )
+      .map(it => {
+
+        const m = it.transform;
+
+        return {
+          text: it.str.trim(),
+          x: Math.round(m[4]),
+          y: Math.round(pageHeight - m[5])
+        };
+      });
+
+    items.sort((a,b)=>
+      a.y - b.y || a.x - b.x
+    );
+
+    const lines = [];
+
+    const threshold = 6;
+
+    items.forEach(item => {
+
+      let line = lines.find(l =>
+        Math.abs(l.y - item.y) <= threshold
+      );
+
+      if(!line){
+
+        line = {
+          y:item.y,
+          items:[]
+        };
+
+        lines.push(line);
+      }
+
+      line.items.push(item);
+    });
+
+    lines.forEach(line => {
+      line.items.sort((a,b)=>a.x-b.x);
+    });
+
+    const xPositions = [];
+
+    lines.forEach(line => {
+
+      line.items.forEach(it => {
+
+        let found = false;
+
+        for(let i=0;i<xPositions.length;i++){
+
+          if(Math.abs(xPositions[i] - it.x) < 12){
+
+            xPositions[i] =
+              Math.round(
+                (xPositions[i] + it.x) / 2
+              );
+
+            found = true;
+            break;
+          }
+        }
+
+        if(!found){
+          xPositions.push(it.x);
+        }
+      });
+    });
+
+    xPositions.sort((a,b)=>a-b);
+
+    lines.forEach(line => {
+
+      const row =
+        new Array(xPositions.length).fill('');
+
+      line.items.forEach(it => {
+
+        let bestCol = 0;
+        let bestDist = Infinity;
+
+        xPositions.forEach((x,ci) => {
+
+          const d = Math.abs(x - it.x);
+
+          if(d < bestDist){
+            bestDist = d;
+            bestCol = ci;
+          }
+        });
+
+        if(row[bestCol]){
+          row[bestCol] += ' ' + it.text;
+        } else {
+          row[bestCol] = it.text;
+        }
+      });
+
+      allRows.push(row);
+    });
+  }
+
+  const maxCols = Math.max(
+    ...allRows.map(r => r.length)
+  );
+
+  const validCols = [];
+
+  for(let c=0;c<maxCols;c++){
+
+    const ok = allRows.some(r =>
+      (r[c] || '').trim()
+    );
+
+    if(ok) validCols.push(c);
+  }
+
+  return allRows.map(r =>
+    validCols.map(c => r[c] || '')
+  );
+}
+
+/* ─────────────────────────────
+   ROWS → CSV
+───────────────────────────── */
+
+function rowsToCsv(rows, sep){
+
+  return rows.map(row =>
+
+    row.map(cell => {
+
+      const s = String(cell ?? '');
+
+      if(
+        s.includes(sep)
+        || s.includes('"')
+        || s.includes('\n')
+      ){
+        return '"' +
+          s.replace(/"/g,'""')
+          + '"';
+      }
+
+      return s;
+
+    }).join(sep)
+
+  ).join('\r\n');
+}
+
+/* ─────────────────────────────
+   ROWS → XLSX
+───────────────────────────── */
+
+function rowsToXlsxBlob(rows){
+
+  const ws =
+    XLSX.utils.aoa_to_sheet(rows);
+
+  const colWidths = [];
+
+  rows.forEach(row => {
+
+    row.forEach((cell,i) => {
+
+      const len =
+        String(cell || '').length;
+
+      colWidths[i] = Math.max(
+        colWidths[i] || 10,
+        Math.min(len + 2, 50)
+      );
+    });
+  });
+
+  ws['!cols'] =
+    colWidths.map(w => ({ wch:w }));
+
+  const wb = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    'Dati'
+  );
+
+  const wbout = XLSX.write(wb,{
+    bookType:'xlsx',
+    type:'array'
+  });
+
+  return new Blob(
+    [wbout],
+    {
+      type:
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+  );
+}
+
+/* ─────────────────────────────
+   RESULTS
+───────────────────────────── */
+
+function renderResults(){
+
+  resultsDiv.style.display = 'flex';
+  resultsDiv.innerHTML = '';
+
+  const fmtClass = {
+    txt:'res-txt',
+    csv:'res-csv',
+    xlsx:'res-xlsx'
+  };
+
+  const dlClass = {
+    txt:'btn-dl-txt',
+    csv:'btn-dl-csv',
+    xlsx:'btn-dl-xlsx'
+  };
+
+  convertedFiles.forEach((cf,i) => {
+
+    const icon =
+      cf.fmt === 'txt'
+      ? '📝'
+      : cf.fmt === 'csv'
+      ? '📊'
+      : '🗂️';
+
+    const div = document.createElement('div');
+
+    div.className =
+      `result-item ${fmtClass[cf.fmt]}`;
+
+    div.innerHTML = `
+      <span class="rname">
+        ${icon} ${cf.name}
+      </span>
+
+      <button
+        class="btn-dl ${dlClass[cf.fmt]}"
+        data-i="${i}"
+      >
+        Scarica
+      </button>
+    `;
+
+    resultsDiv.appendChild(div);
+  });
+
+  resultsDiv
+    .querySelectorAll('.btn-dl')
+    .forEach(btn => {
+
+      btn.addEventListener('click', () => {
+        downloadOne(
+          parseInt(btn.dataset.i)
+        );
+      });
+    });
+}
+
+function downloadOne(i){
+
+  const cf = convertedFiles[i];
+
+  let blob;
+
+  if(cf.fmt === 'xlsx'){
+
+    blob = rowsToXlsxBlob(cf.rows);
+
+  } else {
+
+    blob = new Blob(
+      [
+        cf.fmt === 'csv'
+          ? '\uFEFF' + cf.content
+          : cf.content
+      ],
+      {
+        type:
+          cf.fmt === 'csv'
+          ? 'text/csv;charset=utf-8'
+          : 'text/plain;charset=utf-8'
+      }
+    );
+  }
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const a =
+    document.createElement('a');
+
+  a.href = url;
+  a.download = cf.name;
+
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
+
