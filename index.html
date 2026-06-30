@@ -95,6 +95,19 @@ h1 .fmt-zip{ color:var(--accent-zip); }
   font-family:'DM Mono', monospace;
 }
 
+.formats-line{
+  margin-top:10px;
+  font-size:13px;
+  font-family:'DM Mono', monospace;
+  letter-spacing:0.08em;
+  font-weight:500;
+}
+
+.formats-line .arrow{
+  color:var(--muted);
+  margin:0 4px;
+}
+
 .card{
   background:var(--surface);
   border:0.5px solid var(--border);
@@ -599,15 +612,18 @@ h1 .fmt-zip{ color:var(--accent-zip); }
   <p class="logo">L.S v3.0 — Web Edition</p>
 
   <h1>
-    <span class="fmt-pdf">PDF → </span>
-    <span class="fmt-txt">TXT</span>
-    <span class="arrow">/</span>
-    <span class="fmt-csv">CSV</span>
-    <span class="arrow">/</span>
-    <span class="fmt-xlsx">XLSX</span>
-    <span class="arrow">/</span>
-    <span class="fmt-zip">COMPRIMI</span>
+    <span class="fmt-pdf">PDF</span> <span class="arrow">Toolkit</span>
   </h1>
+
+  <p class="subtitle formats-line">
+    <span class="fmt-txt">TXT</span>
+    <span class="arrow">·</span>
+    <span class="fmt-csv">CSV</span>
+    <span class="arrow">·</span>
+    <span class="fmt-xlsx">XLSX</span>
+    <span class="arrow">·</span>
+    <span class="fmt-zip">COMPRIMI</span>
+  </p>
 
   <p class="subtitle">
     Conversione locale · layout preservato · nessun upload
