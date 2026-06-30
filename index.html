@@ -916,8 +916,17 @@ function updateConvertBtnColor(){
     zip:'btn-primary-zip'
   };
 
+  const labels = {
+    txt:'Converti',
+    csv:'Converti',
+    xlsx:'Converti',
+    zip:'Comprimi'
+  };
+
   btnConvert.className =
     `btn ${colors[currentFmt]}`;
+
+  btnConvert.textContent = labels[currentFmt];
 }
 
 /* ─────────────────────────────
