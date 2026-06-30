@@ -11,6 +11,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 
 <style>
 *, *::before, *::after {
@@ -34,6 +35,9 @@
 
   /* XLSX = verde */
   --accent-xlsx:#22c55e;
+
+  /* COMPRIMI = blu */
+  --accent-zip:#3b82f6;
 
   --text:#f0f0e8;
   --muted:#888880;
@@ -81,6 +85,7 @@ h1 .arrow{ color:var(--accent); }
 h1 .fmt-txt{ color:var(--accent); }
 h1 .fmt-csv{ color:var(--accent-csv); }
 h1 .fmt-xlsx{ color:var(--accent-xlsx); }
+h1 .fmt-zip{ color:var(--accent-zip); }
 
 .subtitle{
   margin-top:12px;
@@ -157,6 +162,12 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
   background:rgba(34,197,94,.08);
 }
 
+.fmt-btn.active-zip{
+  border-color:var(--accent-zip);
+  color:var(--accent-zip);
+  background:rgba(59,130,246,.08);
+}
+
 /* CSV OPTIONS */
 
 .csv-options{
@@ -173,6 +184,66 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
 
 .csv-options.show{
   display:block;
+}
+
+.zip-options{
+  margin-bottom:20px;
+  padding:14px 16px;
+
+  background:rgba(59,130,246,.06);
+  border:0.5px solid rgba(59,130,246,.25);
+
+  border-radius:var(--radius);
+
+  display:none;
+}
+
+.zip-options.show{
+  display:block;
+}
+
+.zip-options label{
+  font-size:12px;
+  font-family:'DM Mono', monospace;
+  color:var(--muted);
+
+  display:block;
+  margin-bottom:8px;
+}
+
+.zip-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.zip-row:last-child{
+  margin-bottom:0;
+}
+
+.zip-row input[type="range"]{
+  flex:1;
+  accent-color:var(--accent-zip);
+}
+
+.zip-row select{
+  flex:1;
+  background:var(--surface2);
+  color:var(--text);
+  border:1px solid var(--border2);
+  border-radius:6px;
+  padding:6px 10px;
+  font-family:'DM Mono', monospace;
+  font-size:12px;
+}
+
+.zip-val{
+  font-family:'DM Mono', monospace;
+  font-size:12px;
+  color:var(--accent-zip);
+  min-width:54px;
+  text-align:right;
 }
 
 .csv-options label{
@@ -409,6 +480,11 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
   color:#0e0e10;
 }
 
+.btn-primary-zip{
+  background:var(--accent-zip);
+  color:#0e0e10;
+}
+
 /* RESULTS */
 
 .results{
@@ -446,6 +522,12 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
 .result-item.res-xlsx{
   background:rgba(34,197,94,.08);
   border:0.5px solid rgba(34,197,94,.25);
+}
+
+/* COMPRIMI */
+.result-item.res-zip{
+  background:rgba(59,130,246,.08);
+  border:0.5px solid rgba(59,130,246,.25);
 }
 
 .result-item .rname{
@@ -494,6 +576,12 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
   color:#0e0e10;
 }
 
+/* COMPRIMI */
+.btn-dl-zip{
+  background:var(--accent-zip);
+  color:#0e0e10;
+}
+
 .footer-note{
   margin-top:32px;
   font-size:11px;
@@ -517,6 +605,8 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
     <span class="fmt-csv">CSV</span>
     <span class="arrow">/</span>
     <span class="fmt-xlsx">XLSX</span>
+    <span class="arrow">/</span>
+    <span class="fmt-zip">COMPRIMI</span>
   </h1>
 
   <p class="subtitle">
@@ -528,18 +618,19 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
 
   <div class="format-row">
     <button class="fmt-btn active-txt" data-fmt="txt">
-      <span class="fmt-icon">📄</span>
       TXT
     </button>
 
     <button class="fmt-btn" data-fmt="csv">
-      <span class="fmt-icon">📊</span>
       CSV
     </button>
 
     <button class="fmt-btn" data-fmt="xlsx">
-      <span class="fmt-icon">🗂️</span>
       XLSX
+    </button>
+
+    <button class="fmt-btn" data-fmt="zip">
+      COMPRIMI
     </button>
   </div>
 
@@ -554,10 +645,26 @@ h1 .fmt-xlsx{ color:var(--accent-xlsx); }
     </div>
   </div>
 
+  <div class="zip-options" id="zipOptions">
+    <label>Qualità output</label>
+    <div class="zip-row">
+      <input type="range" id="zipQuality" min="10" max="95" step="5" value="60">
+      <span class="zip-val" id="zipQualityVal">60%</span>
+    </div>
+
+    <label>Risoluzione</label>
+    <div class="zip-row">
+      <select id="zipDpi">
+        <option value="72">Bassa (72 DPI) — schermo/email</option>
+        <option value="120" selected>Media (120 DPI) — uso generale</option>
+        <option value="150">Alta (150 DPI) — stampa leggera</option>
+        <option value="200">Molto alta (200 DPI) — stampa</option>
+      </select>
+    </div>
+  </div>
+
   <div class="drop-zone" id="dropZone">
     <input type="file" id="fileInput" accept=".pdf" multiple>
-
-    <span class="drop-icon">📄</span>
 
     <p class="drop-label">
       Trascina i PDF qui
@@ -613,6 +720,8 @@ let convertedFiles = [];
 
 let currentFmt = 'txt';
 let csvSep = ',';
+let zipQuality = 0.6;
+let zipDpi = 120;
 
 /* ─────────────────────────────
    ELEMENTS
@@ -634,6 +743,20 @@ const progressCount = document.getElementById('progressCount');
 const resultsDiv = document.getElementById('results');
 
 const csvOptions = document.getElementById('csvOptions');
+const zipOptions = document.getElementById('zipOptions');
+
+const zipQualityInput = document.getElementById('zipQuality');
+const zipQualityVal = document.getElementById('zipQualityVal');
+const zipDpiSelect = document.getElementById('zipDpi');
+
+zipQualityInput.addEventListener('input', () => {
+  zipQuality = Number(zipQualityInput.value) / 100;
+  zipQualityVal.textContent = zipQualityInput.value + '%';
+});
+
+zipDpiSelect.addEventListener('change', () => {
+  zipDpi = Number(zipDpiSelect.value);
+});
 
 /* ─────────────────────────────
    FORMAT BUTTONS
@@ -653,6 +776,11 @@ document.querySelectorAll('.fmt-btn').forEach(btn => {
     csvOptions.classList.toggle(
       'show',
       currentFmt === 'csv'
+    );
+
+    zipOptions.classList.toggle(
+      'show',
+      currentFmt === 'zip'
     );
 
     updateConvertBtnColor();
@@ -740,7 +868,7 @@ function renderFileList(){
 
     div.innerHTML = `
       <span class="fname">
-        📄 ${f.name}
+        ${f.name}
       </span>
 
       <span class="fsize">
@@ -768,7 +896,8 @@ function updateConvertBtnColor(){
   const colors = {
     txt:'btn-primary',
     csv:'btn-primary-csv',
-    xlsx:'btn-primary-xlsx'
+    xlsx:'btn-primary-xlsx',
+    zip:'btn-primary-zip'
   };
 
   btnConvert.className =
@@ -836,6 +965,35 @@ btnConvert.addEventListener('click', async () => {
 
     try{
 
+      if(currentFmt === 'zip'){
+
+        /* COMPRESSIONE PDF */
+        const compressedBytes = await pdfToCompressed(
+          f, zipQuality, zipDpi,
+          (pageNum, totalPages) => {
+            progressText.textContent =
+              `Elaborazione: ${f.name} — pagina ${pageNum}/${totalPages}`;
+
+            const fileFrac = i / selectedFiles.length;
+            const pageFrac =
+              (pageNum / totalPages) / selectedFiles.length;
+
+            progressFill.style.width =
+              `${Math.round((fileFrac + pageFrac) * 100)}%`;
+          }
+        );
+
+        convertedFiles.push({
+          fmt:'zip',
+          name:f.name.replace(/\.pdf$/i,'_compresso.pdf'),
+          content:null,
+          rows:null,
+          bytes:compressedBytes,
+          originalSize:f.size
+        });
+
+      } else {
+
       /* TXT PERFETTO */
       const txt = await pdfToText(f);
 
@@ -873,6 +1031,8 @@ btnConvert.addEventListener('click', async () => {
             rows
           });
         }
+      }
+
       }
 
       statusEl.textContent = 'Fatto ✓';
@@ -936,6 +1096,68 @@ async function pdfToText(file){
   }
 
   return fullText;
+}
+
+/* ─────────────────────────────
+   PDF → PDF COMPRESSO
+───────────────────────────── */
+
+async function pdfToCompressed(file, quality, dpi, onPageProgress){
+
+  const buffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({
+    data: new Uint8Array(buffer)
+  }).promise;
+
+  const scale = dpi / 72;
+
+  const outDoc = await PDFLib.PDFDocument.create();
+
+  for(let p=1; p<=pdf.numPages; p++){
+
+    if(onPageProgress) onPageProgress(p, pdf.numPages);
+
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    await page.render({
+      canvasContext: ctx,
+      viewport
+    }).promise;
+
+    const jpegBytes = await new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if(!blob){ reject(new Error('Conversione immagine fallita')); return; }
+        const reader = new FileReader();
+        reader.onload = () => resolve(new Uint8Array(reader.result));
+        reader.onerror = () => reject(new Error('Lettura immagine fallita'));
+        reader.readAsArrayBuffer(blob);
+      }, 'image/jpeg', quality);
+    });
+
+    const jpegImage = await outDoc.embedJpg(jpegBytes);
+
+    const newPage = outDoc.addPage([canvas.width, canvas.height]);
+    newPage.drawImage(jpegImage, {
+      x:0, y:0,
+      width:canvas.width,
+      height:canvas.height
+    });
+
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+
+  return await outDoc.save();
 }
 
 function extractLayoutText(content, viewport){
@@ -1349,33 +1571,41 @@ function renderResults(){
   const fmtClass = {
     txt:'res-txt',
     csv:'res-csv',
-    xlsx:'res-xlsx'
+    xlsx:'res-xlsx',
+    zip:'res-zip'
   };
 
   const dlClass = {
     txt:'btn-dl-txt',
     csv:'btn-dl-csv',
-    xlsx:'btn-dl-xlsx'
+    xlsx:'btn-dl-xlsx',
+    zip:'btn-dl-zip'
   };
 
   convertedFiles.forEach((cf,i) => {
 
-    const icon =
-      cf.fmt === 'txt'
-      ? '📝'
-      : cf.fmt === 'csv'
-      ? '📊'
-      : '🗂️';
+    const fmtLabel = {
+      txt:'TXT',
+      csv:'CSV',
+      xlsx:'XLSX',
+      zip:'PDF'
+    }[cf.fmt];
 
     const div = document.createElement('div');
 
     div.className =
       `result-item ${fmtClass[cf.fmt]}`;
 
+    const sizeNote =
+      cf.fmt === 'zip'
+      ? ` <span class="rmeta">${(cf.originalSize/1024).toFixed(0)}KB → ${(cf.bytes.byteLength/1024).toFixed(0)}KB</span>`
+      : '';
+
     div.innerHTML = `
       <span class="rname">
-        ${icon} ${cf.name}
+        [${fmtLabel}] ${cf.name}
       </span>
+      ${sizeNote}
 
       <button
         class="btn-dl ${dlClass[cf.fmt]}"
@@ -1410,6 +1640,10 @@ function downloadOne(i){
 
     blob = rowsToXlsxBlob(cf.rows);
 
+  } else if(cf.fmt === 'zip'){
+
+    blob = new Blob([cf.bytes], { type:'application/pdf' });
+
   } else {
 
     blob = new Blob(
@@ -1435,10 +1669,16 @@ function downloadOne(i){
 
   a.href = url;
   a.download = cf.name;
+  a.style.display = 'none';
+
+  document.body.appendChild(a);
 
   a.click();
 
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 </script>
 </body>
